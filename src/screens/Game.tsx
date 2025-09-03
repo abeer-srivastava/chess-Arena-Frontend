@@ -4,6 +4,13 @@ import { useSocket } from "../hooks/useSocket";
 import "../index.css";
 import { Chess } from "chess.js";
 
+type MoveRecord = {
+  moveNumber: number;
+  white?: string;
+  black?: string;
+};
+
+
 const INIT_GAME = "init-game";
 const MOVE = "move";
 const GAME_OVER = "game_over";
@@ -16,7 +23,8 @@ export const Game = () => {
   const [playerColor, setPlayerColor] = useState("");
   const [result, setResult] = useState<string | null>(null);
   const [winner, setWinner] = useState<string | null>(null);
-  const [moves, setMoves] = useState<string[]>([]); // Move history
+const [moves, setMoves] = useState<MoveRecord[]>([]);
+ // Move history
 
 const getFormattedMoves = () => {
   const formatted = [];
@@ -59,14 +67,35 @@ const getFormattedMoves = () => {
               from: moveData.from,
               to: moveData.to,
             });
+// todo storing data
 
             if (result) {
               if (message.payload.board) {
                 chess.load(message.payload.board);
               }
               setBoard([...chess.board()]);
-              setMoves([...chess.history()]);
-
+             setMoves((prevMoves) => {
+              const lastRow = prevMoves[prevMoves.length - 1];
+              const isWhiteMove = result.color === "w";
+              if (isWhiteMove) {
+                // White's move → always push a new row
+                return [
+                  ...prevMoves,
+                  { moveNumber: prevMoves.length + 1, white: result.san },
+                ];
+              } else {
+                // Black's move → update last row
+                if (lastRow) {
+                  const updated = [...prevMoves];
+                  updated[updated.length - 1] = {
+                    ...lastRow,
+                    black: result.san,
+                  };
+                  return updated;
+                }
+                return prevMoves; // safeguard
+              }
+            });
               if (chess.isCheck() && !chess.isCheckmate()) {
                 setGameStatus(
                   `${chess.turn() === "w" ? "White" : "Black"} is in check!`
@@ -179,21 +208,19 @@ const getFormattedMoves = () => {
               </tr>
             </thead>
             <tbody>
-              {getFormattedMoves().map((row, index) => {
+              {moves.map((row, index) => {
                 const isLastMove =
                   index === getFormattedMoves().length - 1;
                 return (
-                  <tr
+                   <tr
                     key={index}
                     className={`border-b border-gray-600 transition-colors duration-200 ${
-                      isLastMove
-                        ? "bg-green-800 font-bold"
-                        : "hover:bg-gray-600"
+                      isLastMove ? "bg-green-800 font-bold" : "hover:bg-gray-600"
                     }`}
                   >
                     <td className="py-1">{row.moveNumber}</td>
-                    <td className="py-1">{row.white}</td>
-                    <td className="py-1">{row.black}</td>
+                    <td className="py-1">{row.white || ""}</td>
+                    <td className="py-1">{row.black || ""}</td>
                   </tr>
                 );
               })}
