@@ -6,7 +6,6 @@ export const Board = ({
   chess,
   board,
   socket,
-  setBoard,
 }: {
   chess: Chess;
   setBoard: (
